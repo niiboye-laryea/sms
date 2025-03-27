@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { request } from 'express';
 import mongoose, { modelNames } from 'mongoose';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -115,9 +115,9 @@ app.get('/api/courses', async (req, res) => {
 });
 
 // Store course api
-app.post('/api/courses', async (request, response) => {
+app.post('/api/courses', async (req, res) => {
     try {
-        const newCourse = new Course(request.body);
+        const newCourse = new Course(req.body);
         const savedCourse = await newCourse.save();
 
         logger.info('New course created: ', {
@@ -125,11 +125,64 @@ app.post('/api/courses', async (request, response) => {
             name: savedCourse.name
         });
 
-        response.status(201).json(savedCourse);
+        res.status(201).json(savedCourse);
     } catch (error) {
         logger.error('Error creating course: ', error);
-        response.status(400).json({ message: error.message });
+        res.status(400).json({ message: error.message });
     }
 });
 
 // Update a course
+app.put('/api/courses/:id', async (req, res) => {
+    try {
+        const course = await Course.findByIdAndUpdate(
+            req.params.id, request.body, { new: true }
+        );
+
+        if(!course) {
+            logger.warn('Course not found for update: ', { courseId: req.params.id });
+            
+            return res.status(404).json({ message: 'Course not found' });
+        }
+
+        logger.info('Course updated succesfully.', {
+            courseId: course._id,
+            name: course.name
+        });
+    } catch (error) {
+        logger.error('Error updating course: ', error);
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// Delete course api
+app.delete('/api/courses/:id', async (req, res) => {
+    try {
+        const enrolledStudents = await Student.countDocuments({ course: req.params.id, });
+        if(enrolledStudents > 0) {
+            logger.warn('Attempted to delete course with enrolled student: ', {
+                courseId: req.params.id, enrolledStudents
+            });
+
+            return res.status(400).json({
+                message: 'Cannot delete course with enrolled students'
+            });
+        }
+
+        const course = await Course.findByIdAndDelete(req.params.id);
+        if(!course) {
+            logger.warn('Course not found for deletion: ', { courseId: req.params.id });
+            return res.status(404).json({ message: 'Course not found' });
+        }
+
+        logger.info('Course deleted successfully: ', {
+            courseId: course._id,
+            name: course.name
+        });
+
+        res.json({ message: 'Course deleted successfully.'});
+    } catch (error) {
+        logger.error('Error deleting course: ', error);
+        res.status(400).json({ message: error.message });
+    }
+});
