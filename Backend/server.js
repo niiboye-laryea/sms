@@ -1,5 +1,5 @@
 import express from 'express';
-import mongoose from 'mongoose';
+import mongoose, { modelNames } from 'mongoose';
 import cors from 'cors';
 import morgan from 'morgan';
 import winston from 'winston';
@@ -11,4 +11,125 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// Connect to the mongo database
+mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/sms", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log("connected to mongodb")).catch(
+    (err) => console.error("Mongodb connection error: ", err)
+);
 
+// Log every single action performed
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.File({filename: 'error.log', level: 'error'}),
+        new winston.transports.File({filename: 'combined.log'}),
+        new winston.transports.Console({
+            format: winston.format.combine(
+                winston.format.colorize(),
+                winston.format.simple()
+            )
+        })
+    ],
+});
+
+app.use(
+    morgan(':method :url :status :response-time ms - res[content-length]')
+);
+
+const apiLogger = (req, res, next) => {
+    const start = Date.now();
+
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+
+        logger.info({
+            method: req.method,
+            path: req.path,
+            status: res.statusCode,
+            duration: `${duration}ms`,
+            params: req.params,
+            query: req.query,
+            body: req.method !== 'GET' ? req.body : undefined 
+        });
+    });
+
+    next();
+}
+
+app.use(apiLogger);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    logger.error({
+        message: err.message,
+        stack: err.stack,
+        method: req.method,
+        path: req.path,
+        params: req.params,
+        query: req.query,
+        body: req.method !== 'GET' ? req.body : undefined 
+    });
+
+    res.status(500).json({
+        message: 'Internal server error'
+    });
+});
+
+// Student schema
+const studentSchema = mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    course: { type: String, required: true },
+    enrollmentDate: { type: Date, required: true },
+    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active'}
+}, { timestamps: true });
+
+const student = mongoose.model("Student", studentSchema);
+
+// Course schema
+const courseSchema = mongoose.Schema({
+    name: { type: String, required: true, unique: true },
+    description: { type: String, required: true },
+    duration: { type: Number, required: true },
+    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active'}
+}, { timestamps: true });
+
+const course = mongoose.model('Course', courseSchema);
+
+// Retrieve all courses api
+app.get('/api/courses', async (req, res) => {
+    try {
+        const courses = await Course.find().sort({ name: 1 });
+        logger.info(`Retrieved ${course.length} courses successfully.`);
+        res.json(courses);
+    } catch (error) {
+        logger.error('Error fetching courses: ', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Store course api
+app.post('/api/courses', async (request, response) => {
+    try {
+        const newCourse = new Course(request.body);
+        const savedCourse = await newCourse.save();
+
+        logger.info('New course created: ', {
+            courseId: savedCourse._id,
+            name: savedCourse.name
+        });
+
+        response.status(201).json(savedCourse);
+    } catch (error) {
+        logger.error('Error creating course: ', error);
+        response.status(400).json({ message: error.message });
+    }
+});
+
+// Update a course
