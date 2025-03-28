@@ -159,7 +159,7 @@ app.put('/api/courses/:id', async (req, res) => {
     }
 });
 
-// Delete course api
+// Delete a course api
 app.delete('/api/courses/:id', async (req, res) => {
     try {
         const enrolledStudents = await Student.countDocuments({ course: req.params.id, });
