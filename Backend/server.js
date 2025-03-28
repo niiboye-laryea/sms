@@ -281,10 +281,10 @@ app.delete('/api/students/:id', async (req, res) => {
                 studentId: req.params.id,
             });
 
-            return res.status(404).json({ 'Student record not found.' });
+            return res.status(404).json({ message: 'Student record not found.' });
         }
 
-        logger.info('Student record deleted successfully: ',{
+        logger.info('Student record deleted successfully: ', {
             studentId: student._id,
             name: student.name,
             course: student.course,
