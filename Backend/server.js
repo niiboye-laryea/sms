@@ -329,6 +329,22 @@ app.get('/api/students/search', async (req, res) => {
     }
 });
 
+app.get('/api/students/:id', async (req, res) => {
+    try {
+        const student = await Student.findById(req.params.id);
+        if(!student) {
+            logger.warn('Student record not found', {
+                studentId: req.params.id
+            });
+
+            return res.status(404).json({ message: 'Student record not found.' });
+        }
+    } catch (error) {
+        logger.error('Error fetching student record', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Dashboard stats api 
 app.get('/api/dashboard/stats', async (req, res) => {
     try {
@@ -364,3 +380,56 @@ async function getDashboardStats() {
         successRate: totalStudents > 0 ? Math.round((graduates / totalStudents) * 100) : 0
     };
 };
+
+// Basic health check
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'UP',
+        timestamp: new Date(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+    });
+});
+
+// Detailed health check
+app.get('/health/detail', async (req, res) => {
+    try {
+        const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+
+        // Get system metrics
+        const systemInfo = {
+            memory: {
+                total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+                used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+                unit: 'MB',
+            },
+            uptime: {
+                seconds: Math.round(process.uptime()),
+                formatted: formattedUptime(process.uptime()),
+            },
+            nodeVersion: process.version,
+            platform: process.platform,
+        };
+
+        const healthCheck = {
+            status: 'UP',
+            timestamp: new Date(),
+            database: {
+                status: dbStatus,
+                name: 'mongoDB',
+                host: mongoose.connection.host,
+            },
+            system: systemInfo,
+            environment: process.env.NODE_ENV || 'development',
+        };
+
+        res.status(200).json(healthCheck);
+    } catch (error) {
+        res.status(500).json({
+            status: 'DOWN',
+            timestamp: new Date(),
+            message: error.message,
+        });
+    }
+});
+
