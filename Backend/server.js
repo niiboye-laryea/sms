@@ -102,6 +102,10 @@ const courseSchema = mongoose.Schema({
 
 const course = mongoose.model('Course', courseSchema);
 
+//  **************************************************
+//  ************* COURSE API STARTS HERE *************
+//  **************************************************
+
 // Retrieve all courses api
 app.get('/api/courses', async (req, res) => {
     try {
@@ -114,7 +118,7 @@ app.get('/api/courses', async (req, res) => {
     }
 });
 
-// Store course api
+// Create course api
 app.post('/api/courses', async (req, res) => {
     try {
         const newCourse = new Course(req.body);
@@ -187,7 +191,7 @@ app.delete('/api/courses/:id', async (req, res) => {
     }
 });
 
-// Find a single course by ID
+// Retrieve a single course by ID
 app.get('/api/course/:id', async (req, res) => {
     try {
         const course = await Course.findById(req.params.id);
@@ -201,3 +205,10 @@ app.get('/api/course/:id', async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 });
+//  **************************************************
+//  ************* COURSE API ENDS HERE *************
+//  **************************************************
+
+//  **************************************************
+//  ************* STUDENT API STARTS HERE ************
+//  **************************************************
