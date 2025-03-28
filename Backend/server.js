@@ -186,3 +186,18 @@ app.delete('/api/courses/:id', async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 });
+
+// Find a single course by ID
+app.get('/api/course/:id', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if(!course) {
+            return res.status(400).json({ message: 'Course not found' });
+        }
+
+        res.json(course);
+    } catch (error) {
+        logger.error('Error fetching course: ', error);
+        res.status(400).json({ message: error.message });
+    }
+});
