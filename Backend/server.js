@@ -328,3 +328,39 @@ app.get('/api/students/search', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
+
+// Dashboard stats api 
+app.get('/api/dashboard/stats', async (req, res) => {
+    try {
+        const stats = await getDashboardStats();
+        logger.info('Dashboard statistics retrieved successfully: ', stats);
+        res.json(stats);
+    } catch (error) {
+        logger.error('Error retrieving dashboard statistics', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Help function for dashboard statistics
+async function getDashboardStats() {
+    const totalStudents = await Student.countDocuments();
+    const activeStudents = await Student.countDocuments({ status: 'Active' });
+    const totalCourses = await Course.countDocuments();
+    const activeCourses = await Course.countDocuments({ status: 'Active' });
+    const graduates = await Student.countDocuments({ status: 'Inactive' });
+    const courseCounts = await Course.aggregate([
+        { $group: {
+            _id: '$course', count: { $sum: 1 }
+        }}
+    ]);
+
+    return {
+        totalStudents, 
+        totalCourses, 
+        activeStudents, 
+        activeCourses, 
+        graduates, 
+        courseCounts, 
+        successRate: totalStudents > 0 ? Math.round((graduates / totalStudents) * 100) : 0
+    };
+};
