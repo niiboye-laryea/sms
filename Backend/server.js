@@ -1,9 +1,16 @@
-import express, { request } from 'express';
-import mongoose, { modelNames } from 'mongoose';
-import cors from 'cors';
-import morgan from 'morgan';
-import winston from 'winston';
+// import { express, request } from 'express';
+// import { mongoose, modelNames } from 'mongoose';
+// import cors from 'cors';
+// import morgan from 'morgan';
+// import winston from 'winston';
+// require('dotenv').config();
+
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
 require('dotenv').config();
+const morgan = require("morgan");
+const winston = require("winston");
 
 const app = express();
 
@@ -329,6 +336,7 @@ app.get('/api/students/search', async (req, res) => {
     }
 });
 
+// Retrieve student record by ID
 app.get('/api/students/:id', async (req, res) => {
     try {
         const student = await Student.findById(req.params.id);
@@ -433,3 +441,26 @@ app.get('/health/detail', async (req, res) => {
     }
 });
 
+function formattedUptime(seconds) {
+    const parts = [];
+
+    const days = Math.floor(seconds / (3600 * 24));
+    const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (remainingSeconds > 0) parts.push(`${remainingSeconds}s`);
+
+    return parts.join(' ');
+}
+
+// Start server
+const PORT = process.env.PORT || 3000;
+
+// Listen
+app.listen(PORT, () => {
+    console.log(`Server is running on ${PORT}`);
+});
