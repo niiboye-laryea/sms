@@ -212,3 +212,34 @@ app.get('/api/course/:id', async (req, res) => {
 //  **************************************************
 //  ************* STUDENT API STARTS HERE ************
 //  **************************************************
+
+// Retrieve all the students
+app.get('/api/students', async (req, res) => {
+    try {
+        const students = await Student.find().sort({ createAt: -1 });
+        logger.info(`Retrieved ${students.length} students successfully.`);
+        res.json(students);
+    } catch (error) {
+        logger.error('Error fetching students.');
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Add new student
+app.post('/api/students', async (req, res) => {
+    try {
+        const student = new Student(req.body);
+        const savedStudent = await student.save();
+
+        logger.info('New student created successfully: ', {
+            studentId: savedStudent._id,
+            name: savedStudent.name,
+            course: savedStudent.course,
+        });
+
+        res.status(201).json(savedStudent);
+    } catch (error) {
+        logger.error('Error creating student record: ', error);
+        res.status(400).json({ message: error.message });
+    }
+});
