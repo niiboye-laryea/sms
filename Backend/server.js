@@ -243,3 +243,88 @@ app.post('/api/students', async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 });
+
+// Edit student record
+app.put('/api/students/:id', async (req, res) => {
+    try {
+        const student = await Student.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+        });
+
+        if(!student) {
+            logger.warn('Student record not found: ', {
+                studentId: req.params.id,
+            });
+
+            return res.status(404).json({ message: 'Student record not found' });
+        }
+
+        logger.info('Student record updated successfully: ', {
+            studentId: student._id,
+            name: student.name,
+            course: student.course,
+        });
+
+        res.json(student);
+    } catch (error) {
+        logger.error('Error updating student record: ', error);
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// Delete student record
+app.delete('/api/students/:id', async (req, res) => {
+    try {
+        const studentRecord = await Student.findByIdAndDelete(req.params.id);
+        if(!student) {
+            logger.warn('Student record not found: ', {
+                studentId: req.params.id,
+            });
+
+            return res.status(404).json({ 'Student record not found.' });
+        }
+
+        logger.info('Student record deleted successfully: ',{
+            studentId: student._id,
+            name: student.name,
+            course: student.course,
+        });
+
+        res.json({ message: 'Student record deleted successfully.' });
+    } catch (error) {
+        logger.error('Error deleting student record: ', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Retrieve a student's record
+app.get('/api/students/search', async (req, res) => {
+    try {
+        const searchTerm = req.query.q;
+        logger.info('Student search initiated: ', searchTerm);
+
+        const students = await Student.find({
+            $or: [
+                { name: { 
+                    $regex: searchTerm, $option: 'i'
+                } },
+                { course: {
+                    $regex: searchTerm, $option: 'i'
+                }},
+                { email: {
+                    $regex: searchTerm, $option: 'i'
+                }}
+            ]
+        });
+
+        logger.info('Student search completed: ', {
+            searchTerm, resultsCount: students.length,
+        });
+
+        res.json(students);
+
+    } catch (error) {
+        logger.error('Error fetching student record: ', error);
+        res.status(500).json({ message: error.message });
+    }
+});
